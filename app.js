@@ -10,6 +10,7 @@ const App = (() => {
     lastUpdated: null,
     loadError: null,
     charts: {}, // active Chart.js instances, keyed by canvas id, so we can destroy before re-render
+    debug: { sheetName: "", matrix: null, error: null, loading: false },
   };
 
   const CATS = [
@@ -34,15 +35,47 @@ const App = (() => {
   // ---------------------------------------------------------------
   // Data loading
   // ---------------------------------------------------------------
+  const GRAND_TOTAL_CANDIDATES = [
+    CONFIG.GRAND_TOTAL_SHEET,
+    "", // tab default/paling kiri
+    "Grand Total",
+    "Rekap Grand Total",
+    "REKAP GRAND TOTAL PRODUKSI",
+    "Dashboard",
+    "Home",
+    "Summary",
+  ].filter((v, i, arr) => v !== undefined && arr.indexOf(v) === i);
+
+  async function loadGrandTotal() {
+    const tried = [];
+    for (const name of GRAND_TOTAL_CANDIDATES) {
+      try {
+        const matrix = await GViz.fetchMatrix(name || undefined);
+        const parsed = GViz.parseTabularSheet(matrix);
+        if (parsed.headers.length > 0) {
+          state.grandTotalSheetUsed = name || "(tab default)";
+          return parsed;
+        }
+        tried.push(name || "(tab default)");
+      } catch (e) {
+        tried.push(`${name || "(tab default)"} [${e.message}]`);
+      }
+    }
+    throw new Error(
+      `Tidak menemukan tabel "Hari/Tanggal" di kandidat sheet Grand Total (${tried.join(", ")}). ` +
+        `Isi nama tab yang benar secara manual di config.js → GRAND_TOTAL_SHEET.`
+    );
+  }
+
   async function loadAll() {
     setStatus("loading", "Mengambil data…");
     state.loadError = null;
     try {
-      const [grandMatrix, ...recapMatrices] = await Promise.all([
-        GViz.fetchMatrix(CONFIG.GRAND_TOTAL_SHEET || undefined),
+      const [grandTotal, ...recapMatrices] = await Promise.all([
+        loadGrandTotal(),
         ...CATS.map((c) => GViz.fetchMatrix(CONFIG.RECAP_SHEETS[c.key])),
       ]);
-      state.grandTotal = GViz.parseTabularSheet(grandMatrix);
+      state.grandTotal = grandTotal;
       CATS.forEach((c, i) => {
         state.recap[c.key] = GViz.parseTabularSheet(recapMatrices[i]);
       });
@@ -121,6 +154,7 @@ const App = (() => {
     const titles = {
       overview: ["Overview", "Ringkasan seluruh kategori produksi bulan ini"],
       calendar: ["Kalender Harian", `Klik tanggal untuk lihat rincian produksi hari itu — ${CONFIG.PERIOD_LABEL}`],
+      debug: ["Debug Data", "Lihat isi mentah tiap tab Google Sheets untuk cek kenapa parsing meleset"],
     };
     CATS.forEach((c) => {
       titles[c.route] = [c.label, `Rekap harian & bulanan — ${CONFIG.PERIOD_LABEL}`];
@@ -133,9 +167,15 @@ const App = (() => {
     Object.values(state.charts).forEach((c) => c && c.destroy());
     state.charts = {};
 
+    if (state.route === "debug") {
+      view.innerHTML = renderDebug();
+      bindDebugEvents();
+      return;
+    }
     if (state.loadError) {
       view.innerHTML = `<div class="error-box">⚠ ${escapeHtml(state.loadError)}<br/>
-        Pastikan spreadsheet di-share sebagai <b>“Anyone with the link – Viewer”</b>, dan nama tab di <code>config.js</code> sudah sesuai.</div>`;
+        Pastikan spreadsheet di-share sebagai <b>“Anyone with the link – Viewer”</b>, dan nama tab di <code>config.js</code> sudah sesuai. ` +
+        `Buka menu <b>Debug Data</b> untuk cek isi mentah tiap tab.</div>`;
       return;
     }
     if (!state.grandTotal) {
@@ -165,12 +205,17 @@ const App = (() => {
     const kpiCards = CATS.map((c) => {
       const d = categoryTotalDisplay(c.key);
       const color = CONFIG.CATEGORY_COLORS[c.key] || "#F2A93B";
+      const noHeaders = !state.recap[c.key] || state.recap[c.key].headers.length === 0;
       return `
         <div class="card kpi-card" style="--kpi-color:${color}" data-route="${c.route}">
           <div class="kpi-label"><span>${c.label}</span></div>
           <div class="kpi-value">${d.primary != null ? fmt(d.primary) : "–"}<span class="kpi-unit">${d.primaryLabel || ""}</span></div>
           <div class="kpi-sub">
-            ${d.rest.map((h) => `<span>${h}: <b>${d.totals ? fmt(d.totals[h]) : "–"}</b></span>`).join("")}
+            ${
+              noHeaders
+                ? `<span style="color:var(--red)">Tabel tidak terbaca dari sheet "${escapeHtml(CONFIG.RECAP_SHEETS[c.key])}" — cek di Debug Data</span>`
+                : d.rest.map((h) => `<span>${h}: <b>${d.totals ? fmt(d.totals[h]) : "–"}</b></span>`).join("")
+            }
           </div>
         </div>`;
     }).join("");
@@ -199,7 +244,7 @@ const App = (() => {
   }
 
   function afterRenderCharts() {
-    document.querySelectorAll("[data-route]").forEach((el) => {
+    document.querySelectorAll("#view [data-route]").forEach((el) => {
       el.addEventListener("click", () => setRoute(el.dataset.route));
     });
 
@@ -360,6 +405,101 @@ const App = (() => {
         </table>
       </div>
     `;
+  }
+
+  // ---------------------------------------------------------------
+  // Rendering: debug / raw sheet inspector
+  // ---------------------------------------------------------------
+  function renderDebug() {
+    const shortcuts = [
+      ["(tab default / paling kiri)", ""],
+      ...Object.entries(CONFIG.RECAP_SHEETS),
+      ["Sheet harian tgl 1", "1"],
+    ];
+    const d = state.debug;
+
+    let body;
+    if (d.loading) {
+      body = `<div class="skeleton" style="height:200px"></div>`;
+    } else if (d.error) {
+      body = `<div class="error-box">⚠ ${escapeHtml(d.error)}</div>`;
+    } else if (d.matrix) {
+      const maxRows = 45, maxCols = 14;
+      const rows = d.matrix.slice(0, maxRows);
+      const nCols = Math.min(maxCols, Math.max(...rows.map((r) => r.length), 1));
+      const head = Array.from({ length: nCols }, (_, i) => `Kolom ${i + 1}`);
+      body = `
+        <div style="margin-bottom:10px" class="period">
+          ${d.matrix.length} baris × ${Math.max(...d.matrix.map((r) => r.length), 0)} kolom terbaca.
+          ${d.matrix.length > maxRows ? `Menampilkan ${maxRows} baris pertama.` : ""}
+        </div>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead><tr><th>#</th>${head.map((h) => `<th>${h}</th>`).join("")}</tr></thead>
+            <tbody>
+              ${rows
+                .map(
+                  (r, i) =>
+                    `<tr><td>${i + 1}</td>${Array.from({ length: nCols }, (_, c) => `<td>${escapeHtml(r[c] ?? "")}</td>`).join("")}</tr>`
+                )
+                .join("")}
+            </tbody>
+          </table>
+        </div>`;
+    } else {
+      body = `<div class="empty-state">Pilih atau ketik nama tab, lalu klik "Ambil Data".</div>`;
+    }
+
+    return `
+      <div class="card" style="margin-bottom:16px">
+        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px">
+          <input id="debugSheetInput" type="text" placeholder='Nama tab, mis. "Rekap Botol" (kosongkan untuk tab default)'
+            value="${escapeHtml(d.sheetName)}"
+            style="flex:1; min-width:220px; background:var(--panel-alt); border:1px solid var(--border); color:var(--text); border-radius:4px; padding:8px 10px; font-size:12.5px" />
+          <button class="btn" id="debugFetchBtn">Ambil Data</button>
+        </div>
+        <div style="display:flex; gap:6px; flex-wrap:wrap">
+          ${shortcuts
+            .map(
+              ([label, name]) =>
+                `<button class="btn" data-debug-shortcut="${escapeHtml(name)}" style="font-size:11px; padding:5px 9px">${escapeHtml(label)}</button>`
+            )
+            .join("")}
+        </div>
+      </div>
+      ${body}
+    `;
+  }
+
+  function bindDebugEvents() {
+    const input = document.getElementById("debugSheetInput");
+    const btn = document.getElementById("debugFetchBtn");
+    if (!btn) return;
+    const doFetch = async () => {
+      state.debug.sheetName = input.value;
+      state.debug.loading = true;
+      state.debug.error = null;
+      render();
+      try {
+        const matrix = await GViz.fetchMatrix(input.value || undefined);
+        state.debug.matrix = matrix;
+      } catch (err) {
+        state.debug.error = err.message || String(err);
+        state.debug.matrix = null;
+      }
+      state.debug.loading = false;
+      render();
+    };
+    btn.addEventListener("click", doFetch);
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") doFetch();
+    });
+    document.querySelectorAll("[data-debug-shortcut]").forEach((el) => {
+      el.addEventListener("click", () => {
+        input.value = el.dataset.debugShortcut;
+        doFetch();
+      });
+    });
   }
 
   // ---------------------------------------------------------------

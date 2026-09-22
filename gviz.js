@@ -69,18 +69,26 @@ const GViz = (() => {
   // ---------------------------------------------------------------
   function parseTabularSheet(matrix) {
     let headerRowIdx = -1;
-    for (let r = 0; r < matrix.length; r++) {
-      const c0 = String(matrix[r][0] || "").toLowerCase();
-      if (c0.includes("hari") || c0.includes("tanggal")) {
-        headerRowIdx = r;
-        break;
+    let labelCol = 0;
+    // Toleransi: kolom label ("Hari"/"Tanggal") bisa di kolom A, B, atau C
+    // (mis. ada kolom nomor urut sebelum kolom tanggal).
+    outer: for (let r = 0; r < matrix.length; r++) {
+      for (let c = 0; c <= 2 && c < matrix[r].length; c++) {
+        const cell = String(matrix[r][c] || "").toLowerCase();
+        if (cell.includes("hari") || cell.includes("tanggal")) {
+          headerRowIdx = r;
+          labelCol = c;
+          break outer;
+        }
       }
     }
-    if (headerRowIdx === -1) return { headers: [], rows: [], total: null };
+    if (headerRowIdx === -1) return { headers: [], rows: [], total: null, labelCol: 0 };
 
     const rawHeaders = matrix[headerRowIdx];
     const lastColIdx = rawHeaders.reduce((last, v, i) => (v !== "" ? i : last), 0);
-    const headers = rawHeaders.slice(1, lastColIdx + 1).map((h, i) => String(h || `Kolom ${i + 1}`).trim());
+    const headers = rawHeaders
+      .slice(labelCol + 1, lastColIdx + 1)
+      .map((h, i) => String(h || `Kolom ${i + 1}`).trim());
 
     const rows = [];
     let total = null;
@@ -88,20 +96,20 @@ const GViz = (() => {
     for (let r = headerRowIdx + 1; r < matrix.length; r++) {
       const row = matrix[r];
       if (isBlankRow(row)) continue;
-      const label = String(row[0] || "").trim();
+      const label = String(row[labelCol] || "").trim();
       if (/^total/i.test(label)) {
         total = {};
-        headers.forEach((h, i) => (total[h] = row[i + 1]));
+        headers.forEach((h, i) => (total[h] = row[labelCol + 1 + i]));
         break; // berhenti setelah baris TOTAL
       }
       const dayNum = Number(label);
       if (!Number.isFinite(dayNum)) continue;
       const values = {};
-      headers.forEach((h, i) => (values[h] = row[i + 1]));
+      headers.forEach((h, i) => (values[h] = row[labelCol + 1 + i]));
       rows.push({ day: dayNum, values });
     }
 
-    return { headers, rows, total };
+    return { headers, rows, total, labelCol };
   }
 
   // ---------------------------------------------------------------
