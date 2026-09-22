@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Rekap Produksi — Dashboard</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%23f2a93b%22/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+</head>
+<body>
+<div id="app">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="brand-mark"></div>
+      <div class="brand-text">
+        <div class="brand-title">Rekap Produksi</div>
+        <div class="brand-sub" id="periodLabel">—</div>
+      </div>
+    </div>
+
+    <div class="nav-group-label">RINGKASAN</div>
+    <div class="nav-item" data-route="overview"><span class="nav-dot"></span> Overview</div>
+    <div class="nav-item" data-route="calendar"><span class="nav-dot"></span> Kalender Harian</div>
+
+    <div class="nav-group-label">REKAP PER KATEGORI</div>
+    <div class="nav-item" data-route="cat-botol"><span class="nav-dot"></span> Rekap Botol</div>
+    <div class="nav-item" data-route="cat-thermoCup"><span class="nav-dot"></span> Rekap Thermo Cup</div>
+    <div class="nav-item" data-route="cat-thermoTray"><span class="nav-dot"></span> Rekap Thermo Tray &amp; Lid</div>
+    <div class="nav-item" data-route="cat-printing"><span class="nav-dot"></span> Rekap Printing</div>
+    <div class="nav-item" data-route="cat-extruder"><span class="nav-dot"></span> Rekap Extruder</div>
+
+    <div class="sidebar-foot">
+      Sumber data: Google Sheets (live)<br />
+      Dibuat untuk lantai produksi.
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div>
+        <button class="btn mobile-nav-toggle" id="navToggle">☰</button>
+        <h1 id="pageTitle">Overview</h1>
+        <div class="period" id="pageSubtitle">Memuat data…</div>
+      </div>
+      <div class="topbar-right">
+        <div class="status-pill" id="statusPill"><span class="status-dot loading" id="statusDot"></span><span id="statusText">Menghubungkan…</span></div>
+        <button class="btn" id="refreshBtn">⟳ Refresh</button>
+      </div>
+    </div>
+
+    <div id="view"></div>
+  </main>
+</div>
+
+<div id="modalRoot"></div>
+
+<script src="config.js"></script>
+<script src="gviz.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
