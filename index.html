@@ -1,67 +1,71 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="id">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Rekap Produksi — Dashboard</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%23f2a93b%22/></svg>">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css" />
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard Rekap Produksi</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏭</text></svg>" />
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
 </head>
 <body>
-<div id="app">
-  <aside class="sidebar" id="sidebar">
-    <div class="brand">
-      <div class="brand-mark"></div>
-      <div class="brand-text">
-        <div class="brand-title">Rekap Produksi</div>
-        <div class="brand-sub" id="periodLabel">—</div>
-      </div>
+  <header class="app-header">
+    <div>
+      <h1>📊 Dashboard Rekap Produksi</h1>
+      <div class="subtitle" id="last-updated">Memuat...</div>
     </div>
-
-    <div class="nav-group-label">RINGKASAN</div>
-    <div class="nav-item" data-route="overview"><span class="nav-dot"></span> Overview</div>
-    <div class="nav-item" data-route="calendar"><span class="nav-dot"></span> Kalender Harian</div>
-
-    <div class="nav-group-label">REKAP PER KATEGORI</div>
-    <div class="nav-item" data-route="cat-botol"><span class="nav-dot"></span> Rekap Botol</div>
-    <div class="nav-item" data-route="cat-thermoCup"><span class="nav-dot"></span> Rekap Thermo Cup</div>
-    <div class="nav-item" data-route="cat-thermoTray"><span class="nav-dot"></span> Rekap Thermo Tray &amp; Lid</div>
-    <div class="nav-item" data-route="cat-printing"><span class="nav-dot"></span> Rekap Printing</div>
-    <div class="nav-item" data-route="cat-extruder"><span class="nav-dot"></span> Rekap Extruder</div>
-
-    <div class="nav-group-label">ALAT BANTU</div>
-    <div class="nav-item" data-route="debug"><span class="nav-dot"></span> Debug Data</div>
-
-    <div class="sidebar-foot">
-      Sumber data: Google Sheets (live)<br />
-      Dibuat untuk lantai produksi.
+    <div class="header-controls">
+      <select id="month-select"></select>
+      <button id="refresh-btn">↻ Refresh Data</button>
     </div>
-  </aside>
+  </header>
 
-  <main class="main">
-    <div class="topbar">
-      <div>
-        <button class="btn mobile-nav-toggle" id="navToggle">☰</button>
-        <h1 id="pageTitle">Overview</h1>
-        <div class="period" id="pageSubtitle">Memuat data…</div>
-      </div>
-      <div class="topbar-right">
-        <div class="status-pill" id="statusPill"><span class="status-dot loading" id="statusDot"></span><span id="statusText">Menghubungkan…</span></div>
-        <button class="btn" id="refreshBtn">⟳ Refresh</button>
-      </div>
-    </div>
+  <nav id="category-nav"></nav>
 
-    <div id="view"></div>
+  <main>
+    <h2 id="view-title">Ringkasan</h2>
+    <div id="status-box" class="status-box hidden"></div>
+
+    <div id="kpi-cards" class="kpi-cards"></div>
+
+    <section class="card-section">
+      <div class="card-section-header">
+        <h2>📅 Kalender Produksi Harian</h2>
+        <select id="metric-select"></select>
+      </div>
+      <div id="calendar-grid"></div>
+      <div id="day-detail" class="hidden"></div>
+    </section>
+
+    <section class="card-section">
+      <div class="card-section-header">
+        <h2>📈 Tren Harian</h2>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="trend-chart"></canvas>
+      </div>
+    </section>
+
+    <section id="monthly-recap-section" class="card-section">
+      <div class="card-section-header">
+        <h2>🗂️ Rekap Bulanan per Kategori</h2>
+      </div>
+      <div id="monthly-recap" class="monthly-recap-grid"></div>
+    </section>
+
+    <section class="card-section">
+      <div class="card-section-header">
+        <h2>📋 Data Lengkap</h2>
+      </div>
+      <div id="data-table"></div>
+    </section>
   </main>
-</div>
 
-<div id="modalRoot"></div>
+  <footer class="app-footer">
+    Data diambil langsung (real-time) dari Google Sheets. Dibuat untuk kebutuhan monitoring produksi harian.
+  </footer>
 
-<script src="config.js"></script>
-<script src="gviz.js"></script>
-<script src="app.js"></script>
+  <script src="config.js"></script>
+  <script src="script.js"></script>
 </body>
 </html>

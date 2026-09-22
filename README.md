@@ -1,102 +1,102 @@
 # Dashboard Rekap Produksi
 
-Dashboard statis (HTML/CSS/JS murni, tanpa build step) yang membaca data
-langsung dari Google Sheets kamu secara live, lalu menampilkannya sebagai:
+Dashboard statis (HTML/CSS/JS, tanpa build step) yang mengambil data
+langsung dari Google Sheets kamu secara real-time, lalu menampilkan:
 
-- **Overview** — kartu ringkasan 5 kategori (Botol, Thermo Cup, Thermo Tray & Lid,
-  Printing, Extruder) + Grand Total bulan ini + grafik tren harian.
-- **Kalender Harian** — grid tanggal 1–31, klik satu tanggal untuk melihat
-  rincian produksi hari itu (6 panel: Botol, Thermo Cup, Thermo Tray, Printing,
-  Extruder CS/E1, Extruder Diamat/E2 — persis format sheet harian kamu),
-  lengkap dengan angka **Harian** dan **Akumulasi**.
-- **Rekap per kategori** — tabel harian 1–31 + total, dan grafik tren, untuk
-  masing-masing dari 5 sheet rekap kamu.
+- Ringkasan KPI (total per kolom)
+- Kalender 1–31 per bulan (heatmap warna sesuai nilai produksi harian, klik untuk detail)
+- Grafik tren harian
+- Tabel data lengkap
+- Rekap bulanan lintas kategori (Botol, Thermo Cup, Thermo Tray & Lid, Printing, Extruder)
 
-Karena tanpa build step, ini tinggal di-deploy langsung ke Vercel dari GitHub —
-tidak perlu `npm install` apa pun.
+## 1. Wajib dilakukan di Google Sheets
 
-## 1. Siapkan spreadsheet-nya
+1. Buka spreadsheet **Rekap Produksi**-nya.
+2. `File > Bagikan > Ubah menjadi "Siapa saja yang memiliki link"` (minimal **Viewer**).
+   Ini wajib — kalau tidak, browser tidak bisa mengambil datanya sama sekali.
+3. Cek nama tab-nya harus **sama persis** (besar-kecil huruf, spasi, tanda `&`)
+   dengan yang ada di `config.js`. Nama tab yang dipakai saat ini:
+   - `Rekap Botol`
+   - `Rekap Thermo Cup`
+   - `Rekap Thermo Tray & Lid`
+   - `Rekap Printing`
+   - `Rekap Extruder`
+   - Tab paling kiri (misal "Grand Total" / "Rekap Total") dipakai otomatis
+     untuk tab **Ringkasan** — tidak perlu diganti namanya, cukup pastikan
+     dia tetap tab paling kiri, atau isi field `sheet` di `config.js` dengan
+     nama tab tersebut.
 
-Dashboard mengambil data lewat endpoint publik Google Sheets (`gviz/tq`), jadi
-spreadsheet **wajib** di-share sebagai:
+   Kalau nama tab kamu berbeda, edit di `config.js` pada bagian `categories`.
 
-> Share → General access → **Anyone with the link → Viewer**
+## 2. Cara kerja parsing data (penting untuk dipahami)
 
-Tanpa ini, dashboard akan menampilkan pesan error saat memuat data (browser
-tidak bisa membaca sheet-nya).
+Script (`script.js`) **tidak** menebak posisi kolom secara hard-code.
+Untuk setiap tab, script akan:
+1. Mencari baris header yang mengandung kata "Tanggal" atau "Hari".
+2. Membaca semua nama kolom di baris itu (misalnya "Output Actual (Pcs)",
+   "Bahan (Kg)", dst) — apa pun nama & jumlah kolomnya.
+3. Membaca baris-baris di bawahnya selama kolom pertama berisi angka 1–31.
+4. Membaca baris "TOTAL" kalau ada (kalau tidak ada, dihitung otomatis
+   dari penjumlahan harian).
 
-## 2. Cocokkan `config.js`
+Karena itu, dashboard ini otomatis menyesuaikan walau setiap tab
+(Botol, Thermo Cup, Printing, Extruder, dst) punya kolom yang berbeda-beda.
+Kalau ada tab yang gagal terbaca, akan muncul pesan error yang menyebutkan
+sheet mana yang bermasalah dan kemungkinan sebabnya (nama tab salah / belum
+dibagikan publik / format header berbeda).
 
-Buka `config.js`, cek 3 hal ini sesuai spreadsheet kamu:
+## 3. Menambah bulan baru
 
-- `SPREADSHEET_ID` — sudah otomatis diisi dari link yang kamu kirim.
-- `RECAP_SHEETS` — nama tab untuk 5 kategori. Sudah diisi default:
-  `Rekap Botol`, `Rekap Thermo Cup`, `Rekap Thermo Tray & Lid`,
-  `Rekap Printing`, `Rekap Extruder` — **ganti kalau nama tab kamu beda**.
-- `DAYS_IN_MONTH` & `PERIOD_LABEL` — update tiap ganti bulan (mis. Oktober = 31 hari).
-- `GRAND_TOTAL_SHEET` — dibiarkan kosong supaya otomatis ambil **tab paling kiri**
-  di file (sesuai sheet "REKAP GRAND TOTAL PRODUKSI"). Kalau ternyata yang
-  ke-load bukan itu, isi nama tab-nya secara manual di sini.
+Setiap bulan biasanya jadi spreadsheet baru. Cukup tambahkan entri baru
+di `config.js` bagian `months`:
 
-Sheet harian (tab `1`, `2`, … `31`) **tidak perlu dikonfigurasi** — dashboard
-otomatis mengambil sheet dengan nama sesuai angka tanggal yang diklik.
+```js
+months: [
+  { key: "2026-09", label: "September 2026", spreadsheetId: "ID_SEPTEMBER" },
+  { key: "2026-10", label: "Oktober 2026",   spreadsheetId: "ID_OKTOBER" },
+],
+```
 
-## 3. Coba di komputer sendiri (opsional)
+Dashboard akan otomatis menampilkan dropdown bulan di kanan atas.
 
-File ini murni statis, jadi cukup buka dengan server lokal apa saja, misalnya:
+## 4. Jalankan lokal
+
+Tidak perlu install apa pun — cukup buka `index.html` langsung di
+browser, atau jalankan server statis sederhana:
 
 ```bash
 npx serve .
-# atau
-python3 -m http.server 8080
 ```
 
-lalu buka `http://localhost:8080`.
+## 5. Deploy ke GitHub + Vercel
 
-> Membuka `index.html` langsung lewat `file://` biasanya diblokir browser
-> (CORS untuk `fetch`), jadi selalu jalankan lewat server lokal atau lewat
-> Vercel.
+1. Buat repo baru di GitHub, upload semua isi folder ini
+   (`index.html`, `style.css`, `script.js`, `config.js`, `vercel.json`).
+2. Buka [vercel.com](https://vercel.com) → **New Project** → Import repo
+   tersebut.
+3. Framework preset pilih **Other** (tidak perlu build command, tidak
+   perlu install command) — karena ini situs statis murni.
+4. Klik **Deploy**. Selesai — dashboard langsung online dan datanya
+   akan selalu real-time mengikuti isian Google Sheets kamu.
 
-## 4. Upload ke GitHub
+## 6. Kalau muncul error CORS / gagal fetch di Vercel
 
-```bash
-git init
-git add .
-git commit -m "Dashboard rekap produksi"
-git branch -M main
-git remote add origin <url-repo-github-kamu>
-git push -u origin main
-```
+Jika setelah deploy dashboard menunjukkan error gagal memuat data
+(padahal sudah "Anyone with the link"), coba alternatif ini:
+1. Di Google Sheets: `File > Share > Publish to web`, pilih sheet yang
+   error tadi, format **CSV**, klik Publish.
+2. Ambil gid dari URL publish tersebut, lalu di `config.js` ganti
+   fetch URL sesuai kebutuhan (hubungi developer/Claude lagi kalau
+   butuh bantuan menyesuaikan `script.js` ke pola URL publish ini).
 
-## 5. Deploy ke Vercel
+## Batasan yang perlu diketahui
 
-1. Login ke [vercel.com](https://vercel.com), **New Project**.
-2. Import repo GitHub yang barusan kamu push.
-3. Framework preset: pilih **Other** (tidak perlu build command / output
-   directory apa pun — semua file statis akan langsung dilayani).
-4. Deploy. Selesai — dashboard langsung live dan otomatis update tiap kali
-   kamu isi spreadsheet (refresh otomatis tiap 5 menit, bisa diubah lewat
-   `CONFIG.AUTO_REFRESH_MS`, atau klik tombol **Refresh** di kanan atas).
-
-## Struktur file
-
-```
-index.html    → kerangka halaman & navigasi
-styles.css    → tema visual (industrial/pabrik, dark)
-config.js     → SEMUA pengaturan yang mungkin perlu kamu ubah
-gviz.js       → pengambilan & parsing data dari Google Sheets
-app.js        → routing & rendering dashboard
-```
-
-## Kalau parsing sheet harian meleset
-
-Panel di modal kalender (`gviz.js` fungsi `parseDailySheet`) membaca sheet
-harian dengan mencari judul section (mis. "Hasil Prod Botol Harian") lalu
-mengumpulkan baris label+angka di sekitarnya, dan menganggap kata
-"Akumulasi" sebagai pemisah antara data harian dan data kumulatif. Kalau ada
-label yang terbaca aneh (misal tergabung/tidak lengkap), itu paling sering
-karena tata letak kolom di sheet-mu sedikit berbeda dari template awal —
-kamu bisa sesuaikan bagian `DAILY_SECTIONS` di `config.js` (kata kunci
-pencarian judul) atau logika di `parseDailySheet` sesuai kebutuhan. Datanya
-sendiri tetap benar (diambil langsung dari sel angka di sheet), yang bisa
-meleset hanya label teks pendampingnya.
+- Dashboard mengasumsikan setiap tab rekap punya pola yang sama dengan
+  tab Grand Total: baris header berisi "Tanggal"/"Hari", lalu baris
+  data 1–31, lalu baris "TOTAL". Kalau layout tab Printing/Extruder-mu
+  ternyata beda total (misal headernya dua baris, atau tanggal ada di
+  kolom lain), beberapa tab mungkin perlu penyesuaian kecil di
+  `analyzeSheet()` pada `script.js`.
+- Karena data diambil langsung dari browser pengguna (client-side),
+  jangan taruh data sensitif/rahasia di spreadsheet ini kalau link
+  dashboard-nya dibagikan ke publik.

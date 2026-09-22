@@ -1,67 +1,76 @@
 /**
- * config.js
- * -------------------------------------------------------------
- * Semua pengaturan yang mungkin perlu diubah ada di file ini.
- * Kalau nama tab (sheet) di Google Sheets kamu berbeda dari
- * default di bawah, cukup ubah di sini — tidak perlu sentuh
- * file lain.
- * -------------------------------------------------------------
+ * ============================================================
+ * KONFIGURASI DASHBOARD REKAP PRODUKSI
+ * ============================================================
+ * Edit bagian ini kalau ID spreadsheet atau nama tab berubah,
+ * atau kalau kamu mau menambah bulan lain (buat spreadsheet baru
+ * per bulan, lalu tambahkan objek baru di array MONTHS).
+ *
+ * PENTING (agar data bisa diambil dari browser / Vercel):
+ * 1. Buka spreadsheet-nya.
+ * 2. Klik "Bagikan" -> ubah akses jadi "Siapa saja yang memiliki link" (Viewer).
+ *    (Kalau tidak, browser tidak akan bisa mengambil datanya.)
+ * 3. Pastikan nama tab di bawah SAMA PERSIS (huruf besar/kecil,
+ *    spasi, tanda "&") dengan nama tab asli di Google Sheets kamu.
+ * ============================================================
  */
 
 const CONFIG = {
-  // ID spreadsheet, diambil dari URL:
-  // https://docs.google.com/spreadsheets/d/<ID_INI>/edit
-  SPREADSHEET_ID: "1FAbcl_l4uxs7KlGFuKRABs_C5HM-qvAiOcPmF-4DqZk",
-
-  // Judul yang tampil di dashboard
-  TITLE: "Rekap Produksi",
-
-  // Bulan & tahun yang sedang berjalan di file ini (untuk label & jumlah hari kalender)
-  PERIOD_LABEL: "September 2026",
-  DAYS_IN_MONTH: 30, // September = 30 hari. Ganti sesuai bulan berjalan.
-
-  // Nama tab untuk tiap kategori rekap bulanan.
-  // Ini harus SAMA PERSIS dengan nama tab di Google Sheets (huruf besar/kecil bebas).
-  RECAP_SHEETS: {
-    botol: "Rekap Botol",
-    thermoCup: "Rekap Thermo Cup",
-    thermoTray: "Rekap Thermo Tray & Lid",
-    printing: "Rekap Printing",
-    extruder: "Rekap Extruder",
-  },
-
-  // Sheet "Grand Total". Dibiarkan kosong ("") supaya dashboard otomatis
-  // mengambil tab PERTAMA (paling kiri) di file — sesuai struktur bawaan
-  // file ini ("REKAP GRAND TOTAL PRODUKSI"). Kalau ternyata salah ambil,
-  // isi nama tab yang benar di sini, misalnya "Grand Total".
-  GRAND_TOTAL_SHEET: "",
-
-  // Nama tab harian mengikuti angka tanggal: "1", "2", ... "31"
-  DAILY_SHEET_PREFIX: "",
-  DAILY_SHEET_SUFFIX: "",
-
-  // Definisi 6 panel yang muncul di tiap sheet harian (1-31), dipakai untuk
-  // mencocokkan judul section saat membaca data. Urutan tidak berpengaruh.
-  DAILY_SECTIONS: [
-    { key: "botol", match: ["hasil prod botol"], label: "Botol", unit: "" },
-    { key: "thermoCup", match: ["thermo (cup)", "thermo cup"], label: "Thermo Cup", unit: "" },
-    { key: "thermoTray", match: ["thermo (tray)", "thermo tray"], label: "Thermo Tray & Lid", unit: "" },
-    { key: "printing", match: ["hasil prod printing"], label: "Printing", unit: "" },
-    { key: "extruderCS", match: ["extruder cs", "(e1)"], label: "Extruder CS (E1)", unit: "" },
-    { key: "extruderDiamat", match: ["extruder diamat", "(e2)"], label: "Extruder Diamat (E2)", unit: "" },
+  // Tab kategori yang akan ditampilkan sebagai menu di dashboard.
+  // "sheet" = nama tab di Google Sheets. "sheet: null" artinya
+  // ambil tab PALING KIRI / default (biasanya "Grand Total").
+  categories: [
+    {
+      id: "ringkasan",
+      label: "Ringkasan",
+      sheet: null, // tab paling kiri (Grand Total / Rekap Total)
+      isOverview: true,
+      color: "#0f172a",
+    },
+    {
+      id: "botol",
+      label: "Rekap Botol",
+      sheet: "Rekap Botol",
+      color: "#2563eb",
+    },
+    {
+      id: "thermocup",
+      label: "Rekap Thermo Cup",
+      sheet: "Rekap Thermo Cup",
+      color: "#059669",
+    },
+    {
+      id: "thermotray",
+      label: "Rekap Thermo Tray & Lid",
+      sheet: "Rekap Thermo Tray & Lid",
+      color: "#d97706",
+    },
+    {
+      id: "printing",
+      label: "Rekap Printing",
+      sheet: "Rekap Printing",
+      color: "#7c3aed",
+    },
+    {
+      id: "extruder",
+      label: "Rekap Extruder",
+      sheet: "Rekap Extruder",
+      color: "#dc2626",
+    },
   ],
 
-  // Warna aksen tiap kategori (dipakai di kartu & grafik)
-  CATEGORY_COLORS: {
-    botol: "#F2A93B",
-    thermoCup: "#4FD1A5",
-    thermoTray: "#5AA9E6",
-    printing: "#C77DFF",
-    extruder: "#E85D5D",
-    extruderCS: "#E85D5D",
-    extruderDiamat: "#F27059",
-  },
-
-  // Refresh otomatis (milidetik). Set 0 untuk mematikan.
-  AUTO_REFRESH_MS: 5 * 60 * 1000,
+  // Daftar bulan. Tambahkan objek baru di sini setiap ganti bulan/spreadsheet.
+  months: [
+    {
+      key: "2026-09",
+      label: "September 2026",
+      spreadsheetId: "1FAbcl_l4uxs7KlGFuKRABs_C5HM-qvAiOcPmF-4DqZk",
+    },
+    // Contoh menambah bulan baru:
+    // {
+    //   key: "2026-10",
+    //   label: "Oktober 2026",
+    //   spreadsheetId: "GANTI_DENGAN_ID_SPREADSHEET_OKTOBER",
+    // },
+  ],
 };
